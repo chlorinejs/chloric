@@ -1,10 +1,16 @@
 # Chloric
 
-A watcher/compiler for Clojure/Chlorine[https://github.com/myguidingstar/chlorine]
+A watcher/compiler for Clojure/[Chlorine](https://github.com/myguidingstar/chlorine)
+
+## Get Chloric
+
+You can build chloric with:
+```
+lein uberjar
+```
+or [download](https://github.com/myguidingstar/chloric/downloads) the jar file.
 
 ## Usage
-
-Build chloric with `lein uberjar`, then:
 
 ```
 java -jar chloric-0.1.0-standalone.jar -r 2000 some-dirs-or-files
