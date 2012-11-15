@@ -16,7 +16,8 @@
     (let [f (.getAbsolutePath file)]
       (println (format "Compiling %s..." f))
       (spit (js-file-of f)
-            (tojs f)))))
+            (tojs f))
+      (println "Done!"))))
 
 (defn delete-js
   "Delete .js files when their .cl2 source files are deleted."
