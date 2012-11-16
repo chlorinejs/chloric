@@ -1,5 +1,6 @@
 (ns chloric.core
   (:use [chlorine.js :only [tojs]]
+        [chlorine.util :only [with-timeout]]
         [watchtower.core]
         [clojure.tools.cli :only [cli]])
   (:gen-class :main true))
@@ -11,12 +12,16 @@
 
 (defn compile-cl2
   "Compiles a list of .cl2 files"
-  [files]
+  [timeout files]
   (doseq [file files]
     (let [f (.getAbsolutePath file)]
       (println (format "Compiling %s..." f))
-      (spit (js-file-of f)
-            (tojs f))
+      (try
+        (with-timeout timeout
+          (spit (js-file-of f)
+                (tojs f)))
+        (catch java.util.concurrent.TimeoutException e
+          (println (format "Time-out compiling %s" f))))
       (println "Done!"))))
 
 (defn delete-js
@@ -27,22 +32,25 @@
 
 (defn run
   "Start the main watcher."
-  [rate-ms dirs]
+  [rate-ms timeout-ms dirs]
   (watcher dirs
            (rate rate-ms)
            (file-filter ignore-dotfiles)
            (file-filter (extensions :cl2))
            (notify-on-start? true)
-           (on-modify    compile-cl2)
+           (on-modify    (partial compile-cl2 timeout-ms))
            (on-delete    delete-js)
-           (on-add       compile-cl2)))
+           (on-add       (partial compile-cl2 timeout-ms))))
 
 (defn -main [& args]
-  (let [[{:keys [rate help]} dirs banner]
+  (let [[{:keys [rate timeout help]} dirs banner]
         (cli args
              ["-h" "--help" "Show help"]
              ["-r" "--rate" "Rate (in millisecond)" :parse-fn #(Integer. %)
-              :default 50]
+              :default 500]
+             ["-t" "--timeout" "Timeout (in millisecond)"
+              :parse-fn #(Integer. %)
+              :default 5000]
              )]
     (when help
       (println banner)
@@ -50,5 +58,5 @@
     (if (not= [] dirs)
       (do
         (println "")
-        (run rate dirs))
+        (run rate timeout dirs))
       (println banner))))
