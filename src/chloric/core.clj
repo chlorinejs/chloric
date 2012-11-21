@@ -1,5 +1,5 @@
 (ns chloric.core
-  (:use [chlorine.js :only [tojs]]
+  (:use [chlorine.js]
         [chlorine.util :only [with-timeout]]
         [watchtower.core]
         [clojure.tools.cli :only [cli]])
@@ -43,11 +43,14 @@
            (on-add       (partial compile-cl2 timeout-ms))))
 
 (defn -main [& args]
-  (let [[{:keys [rate timeout help]} dirs banner]
+  (let [[{:keys [rate timeout profile pretty-print help]} dirs banner]
         (cli args
              ["-h" "--help" "Show help"]
+             ["-u" "--profile"
+              "Compile with a specified profile. Can be a file or a pre-defined keyword"]
              ["-r" "--rate" "Rate (in millisecond)" :parse-fn #(Integer. %)
               :default 500]
+             ["-pp" "--[no-]pretty-print" "Pretty-print javascript"]
              ["-t" "--timeout" "Timeout (in millisecond)"
               :parse-fn #(Integer. %)
               :default 5000]
@@ -58,5 +61,12 @@
     (if (not= [] dirs)
       (do
         (println "")
-        (run rate timeout dirs))
+        (with-profile (let [profile (get-profile profile)]
+                        (if pretty-print
+                          (merge profile {:pretty-print true} )
+                          profile))
+          (println (str "*symbol-map*:   " *symbol-map*))
+          (println (str "*pretty-print*: " *print-pretty*))
+          (run rate timeout dirs)
+          ))
       (println banner))))
