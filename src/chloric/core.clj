@@ -47,7 +47,8 @@
         (cli args
              ["-h" "--help" "Show help"]
              ["-u" "--profile"
-              "Compile with a specified profile. Can be a file or a pre-defined keyword"]
+              "Compile with a specified profile. Can be a file or a pre-defined keyword"
+              :default ""]
              ["-r" "--rate" "Rate (in millisecond)" :parse-fn #(Integer. %)
               :default 500]
              ["-pp" "--[no-]pretty-print" "Pretty-print javascript"]
