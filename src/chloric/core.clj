@@ -2,7 +2,11 @@
   (:use [chlorine.js]
         [chlorine.util :only [with-timeout]]
         [watchtower.core]
-        [clojure.tools.cli :only [cli]])
+        [clojure.tools.cli :only [cli]]
+        [clojure.stacktrace :only [print-stack-trace]]
+        [clansi.core])
+  (:import [java.util Calendar]
+           [java.text SimpleDateFormat])
   (:gen-class :main true))
 
 (defn js-file-of
@@ -15,14 +19,18 @@
   [timeout files]
   (doseq [file files]
     (let [f (.getAbsolutePath file)]
-      (println (format "Compiling %s..." f))
+      (println "")
+      (print (gen-timestamp))
+      (print " ")
+      (println (format "Compiling %s..." (style f :underline)))
       (try
-        (with-timeout timeout
-          (spit (js-file-of f)
+        (spit (js-file-of f)
+              (with-timeout timeout
                 (tojs f)))
-        (catch java.util.concurrent.TimeoutException e
-          (println (format "Time-out compiling %s" f))))
-      (println "Done!"))))
+        (println (style "Done!" :green))
+        (catch Throwable e
+          (println (format (str (style "Error: " :red) " compiling %s") f))
+          (print-stack-trace e 3))))))
 
 (defn delete-js
   "Delete .js files when their .cl2 source files are deleted."
@@ -43,7 +51,7 @@
            (on-add       (partial compile-cl2 timeout-ms))))
 
 (defn -main [& args]
-  (let [[{:keys [rate timeout profile pretty-print help]} dirs banner]
+  (let [[{:keys [rate timeout profile color pretty-print help]} dirs banner]
         (cli args
              ["-h" "--help" "Show help"]
              ["-u" "--profile"
@@ -52,6 +60,8 @@
              ["-r" "--rate" "Rate (in millisecond)" :parse-fn #(Integer. %)
               :default 500]
              ["-pp" "--[no-]pretty-print" "Pretty-print javascript"]
+             ["-c" "--[no-]color" "Print with colors"
+              :default true]
              ["-t" "--timeout" "Timeout (in millisecond)"
               :parse-fn #(Integer. %)
               :default 5000]
@@ -66,8 +76,10 @@
                         (if pretty-print
                           (merge profile {:pretty-print true} )
                           profile))
-          (println (str "*symbol-map*:   " *symbol-map*))
-          (println (str "*pretty-print*: " *print-pretty*))
-          (run rate timeout dirs)
-          ))
+          (println (str (style "*symbol-map*:   " :magenta)
+                        (style *symbol-map* :blue)))
+          (println (str (style "*pretty-print*: " :magenta)
+                        (style  *print-pretty* :blue)))
+          (binding [*use-ansi* color]
+            (run rate timeout dirs))))
       (println banner))))
