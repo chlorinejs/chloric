@@ -16,9 +16,9 @@
 
 (defn compile-cl2
   "Compiles a list of .cl2 files"
-  [timeout files]
-  (doseq [file files]
-    (let [f (.getAbsolutePath file)]
+  [timeout targets _]
+  (doseq [file targets]
+    (let [f (.getAbsolutePath (clojure.java.io/file file))]
       (println "")
       (print (gen-timestamp))
       (print " ")
@@ -30,7 +30,8 @@
         (println (style "Done!" :green))
         (catch Throwable e
           (println (format (str (style "Error: " :red) " compiling %s") f))
-          (print-stack-trace e 3))))))
+          (print-stack-trace e
+                             (if *verbose* 10 3)))))))
 
 (defn delete-js
   "Delete .js files when their .cl2 source files are deleted."
@@ -40,23 +41,39 @@
 
 (defn run
   "Start the main watcher."
-  [rate-ms timeout-ms dirs]
-  (watcher dirs
+  [rate-ms timeout-ms watch ignore targets]
+  (watcher (if watch
+             (clojure.string/split watch #",")
+             [(.getAbsolutePath (clojure.java.io/file ""))])
            (rate rate-ms)
            (file-filter ignore-dotfiles)
+           (file-filter (fn [f] (not
+                                 (contains?
+                                  (apply set
+                                         (clojure.string/split
+                                          (or ignore "") #","))
+                                  f))))
            (file-filter (extensions :cl2))
            (notify-on-start? true)
-           (on-modify    (partial compile-cl2 timeout-ms))
+           (on-modify    (partial compile-cl2 timeout-ms targets))
            (on-delete    delete-js)
-           (on-add       (partial compile-cl2 timeout-ms))))
+           (on-add       (partial compile-cl2 timeout-ms targets))))
 
 (defn -main [& args]
-  (let [[{:keys [rate timeout profile color pretty-print help]} dirs banner]
+  (let [[{:keys [watch ignore rate timeout profile color pretty-print
+                 verbose help]}
+         targets banner]
         (cli args
              ["-h" "--help" "Show help"]
              ["-u" "--profile"
               "Compile with a specified profile. Can be a file or a pre-defined keyword"
               :default ""]
+             ["-w" "--watch"
+              "A comma-delimited list of dirs or cl2 files to watch for changes.
+ When a change to a cl2 file occurs, re-compile target files"]
+             ["-i" "--ignore"
+              "A comma-delimited list of folders to ignore for changes."
+              :default nil]
              ["-r" "--rate" "Rate (in millisecond)" :parse-fn #(Integer. %)
               :default 500]
              ["-pp" "--[no-]pretty-print" "Pretty-print javascript"]
@@ -65,21 +82,29 @@
              ["-t" "--timeout" "Timeout (in millisecond)"
               :parse-fn #(Integer. %)
               :default 5000]
+             ["-v" "--[no-]verbose" "Verbose mode"]
              )]
     (when help
       (println banner)
       (System/exit 0))
-    (if (not= [] dirs)
+    (if (not= [] targets)
       (do
         (println "")
-        (with-profile (let [profile (get-profile profile)]
-                        (if pretty-print
-                          (merge profile {:pretty-print true} )
-                          profile))
-          (println (str (style "*symbol-map*:   " :magenta)
-                        (style *symbol-map* :blue)))
-          (println (str (style "*pretty-print*: " :magenta)
-                        (style  *print-pretty* :blue)))
-          (binding [*use-ansi* color]
-            (run rate timeout dirs))))
+        (binding [*use-ansi* color
+                  *verbose*  verbose]
+          (with-profile (let [profile (get-profile profile)]
+                          (if pretty-print
+                            (merge profile {:pretty-print true} )
+                            profile))
+            (if *verbose*
+              (do
+                (println (str (style "*symbol-map*:   " :magenta)
+                              (style *symbol-map* :blue)))
+                (println (str (style "*pretty-print*: " :magenta)
+                              (style  *print-pretty* :blue)))
+                (println (str "Watching: " (pr-str watch)))
+                (println (str "Ignoring: " (pr-str ignore)))
+                (println (str "Targets: " (pr-str targets)))))
+
+            (run rate timeout watch ignore targets))))
       (println banner))))
