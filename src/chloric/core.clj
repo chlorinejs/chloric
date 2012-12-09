@@ -9,7 +9,7 @@
            [java.text SimpleDateFormat])
   (:gen-class :main true))
 
-(defn js-file-of
+(defn js-file-for
   "Generate js file name from cl2 file name."
   [cl2-file]
   (clojure.string/replace cl2-file #".cl2$" ".js"))
@@ -24,8 +24,9 @@
       (print " ")
       (println (format "Compiling %s..." (style f :underline)))
       (try
-        (spit (js-file-of f)
+        (spit (js-file-for f)
               (with-timeout timeout
+                (dosync (ref-set *macros* {}))
                 (tojs f)))
         (println (style "Done!" :green))
         (catch Throwable e
@@ -37,7 +38,7 @@
   "Delete .js files when their .cl2 source files are deleted."
   [cl2-files]
   (doseq [f cl2-files]
-    (.delete (clojure.java.io/file (js-file-of f)))))
+    (.delete (clojure.java.io/file (js-file-for f)))))
 
 (defn run
   "Start the main watcher."
