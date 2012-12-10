@@ -1,6 +1,6 @@
 (ns chloric.core
   (:use [chlorine.js]
-        [chlorine.util :only [with-timeout]]
+        [chlorine.util :only [replace-map with-timeout]]
         [watchtower.core]
         [clojure.tools.cli :only [cli]]
         [clojure.stacktrace :only [print-stack-trace]]
@@ -11,8 +11,8 @@
 
 (defn js-file-for
   "Generate js file name from cl2 file name."
-  [cl2-file & regexps]
-  (clojure.string/replace cl2-file #".cl2$" ".js"))
+  [cl2-file path-map]
+  (replace-map cl2-file path-map))
 
 (defn compile-cl2
   "Compiles a list of .cl2 files"
@@ -24,7 +24,7 @@
       (print " ")
       (println (format "Compiling %s..." (style f :underline)))
       (try
-        (spit (js-file-for f)
+        (spit (js-file-for f *path-map*)
               (with-timeout timeout
                 (dosync (ref-set *macros* {}))
                 (tojs f)))
@@ -96,22 +96,24 @@
         (println "")
         (binding [*use-ansi* color
                   *verbose*  verbose]
-          (with-profile (let [profile (get-profile profile)]
-                          (if pretty-print
-                            (merge profile {:pretty-print true} )
-                            profile))
-            (if *verbose*
-              (do
-                (println (str (style "*symbol-map*:   " :magenta)
-                              (style *symbol-map* :blue)))
-                (println (str (style "*pretty-print*: " :magenta)
-                              (style  *print-pretty* :blue)))
-                (println (str "Watching: " (pr-str watch)))
-                (println (str "Ignoring: " (pr-str ignore)))
-                (println (str "Targets:  " (pr-str targets)))
-                (println (str "Once?:    " (pr-str once)))))
+          (let [profile (get-profile profile)]
+            (with-profile (if pretty-print
+                            (merge profile {:pretty-print true})
+                            profile)
+              (binding [*path-map* (or (:path-map profile) *path-map*)]
+                  (if *verbose*
+                    (do
+                      (println (str (style "*symbol-map*:   " :magenta)
+                                    (style *symbol-map* :blue)))
+                      (println (str (style "*pretty-print*: " :magenta)
+                                    (style  *print-pretty* :blue)))
+                      (println (str "Watching: " (pr-str watch)))
+                      (println (str "Ignoring: " (pr-str ignore)))
+                      (println (str "Targets:  " (pr-str targets)))
+                      (println (str "Once?:    " (pr-str once)))
+                      (println (str "Path-map: " (pr-str *path-map*)))))
 
-            (if once
-              (compile-cl2 timeout targets)
-              (run rate timeout watch ignore targets)))))
+                  (if once
+                    (compile-cl2 timeout targets)
+                    (run rate timeout watch ignore targets)))))))
       (println banner))))
