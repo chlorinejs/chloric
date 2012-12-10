@@ -11,12 +11,12 @@
 
 (defn js-file-for
   "Generate js file name from cl2 file name."
-  [cl2-file]
+  [cl2-file & regexps]
   (clojure.string/replace cl2-file #".cl2$" ".js"))
 
 (defn compile-cl2
   "Compiles a list of .cl2 files"
-  [timeout targets _]
+  [timeout targets & _]
   (doseq [file targets]
     (let [f (.getAbsolutePath (clojure.java.io/file file))]
       (println "")
@@ -61,7 +61,8 @@
            (on-add       (partial compile-cl2 timeout-ms targets))))
 
 (defn -main [& args]
-  (let [[{:keys [watch ignore rate timeout profile color pretty-print
+  (let [[{:keys [watch ignore rate timeout profile once
+                 color pretty-print
                  verbose help]}
          targets banner]
         (cli args
@@ -72,6 +73,8 @@
              ["-w" "--watch"
               "A comma-delimited list of dirs or cl2 files to watch for changes.
  When a change to a cl2 file occurs, re-compile target files"]
+             ["-1" "--[no-]once"
+              "Don't watch, just compile once" :default nil]
              ["-i" "--ignore"
               "A comma-delimited list of folders to ignore for changes."
               :default nil]
@@ -105,7 +108,10 @@
                               (style  *print-pretty* :blue)))
                 (println (str "Watching: " (pr-str watch)))
                 (println (str "Ignoring: " (pr-str ignore)))
-                (println (str "Targets: " (pr-str targets)))))
+                (println (str "Targets:  " (pr-str targets)))
+                (println (str "Once?:    " (pr-str once)))))
 
-            (run rate timeout watch ignore targets))))
+            (if once
+              (compile-cl2 timeout targets)
+              (run rate timeout watch ignore targets)))))
       (println banner))))
