@@ -18,13 +18,16 @@
   "Compiles a list of .cl2 files"
   [timeout targets & _]
   (doseq [file targets]
-    (let [f (.getAbsolutePath (clojure.java.io/file file))]
+    (let [f (.getAbsolutePath (clojure.java.io/file file))
+          js-f (clojure.java.io/file (js-file-for f *path-map*))]
       (println "")
       (print (gen-timestamp))
       (print " ")
       (println (format "Compiling %s..." (style f :underline)))
       (try
-        (spit (js-file-for f *path-map*)
+        (when-not (.isDirectory (.getParentFile js-f))
+          (.mkdirs (.getParentFile js-f)))
+        (spit js-f
               (with-timeout timeout
                 (dosync (ref-set *macros* {}))
                 (tojs f)))
