@@ -83,7 +83,7 @@
               :default nil]
              ["-r" "--rate" "Rate (in millisecond)" :parse-fn #(Integer. %)
               :default 500]
-             ["-pp" "--[no-]pretty-print" "Pretty-print javascript"]
+             ["-p" "--[no-]pretty-print" "Pretty-print javascript"]
              ["-c" "--[no-]color" "Print with colors"
               :default true]
              ["-t" "--timeout" "Timeout (in millisecond)"
