@@ -3,7 +3,7 @@
         [chlorine.util :only [replace-map with-timeout]]
         [watchtower.core]
         [clojure.tools.cli :only [cli]]
-        [clojure.stacktrace :only [print-stack-trace]]
+        [clojure.stacktrace :only [print-cause-trace]]
         [clansi.core])
   (:import [java.util Calendar]
            [java.text SimpleDateFormat])
@@ -34,7 +34,7 @@
         (println (style "Done!" :green))
         (catch Throwable e
           (println (format (str (style "Error: " :red) " compiling %s") f))
-          (print-stack-trace e
+          (print-cause-trace e
                              (if *verbose* 10 3)))))))
 
 (defn delete-js
