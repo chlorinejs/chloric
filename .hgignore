@@ -1,0 +1,15 @@
+syntax: glob
+/checkouts
+pom.xml
+*.jar
+*.class
+.lein-deps-sum
+.lein-failures
+.lein-plugins
+target/*
+.lein-failures
+*.jar
+pom.xml
+classes/*
+lib/*
+hs_err_*.log
