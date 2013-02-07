@@ -117,6 +117,7 @@
                       (println (str "Path-map: " (pr-str *path-map*)))))
 
                   (if once
-                    (compile-cl2 timeout targets)
+                    (do (compile-cl2 timeout targets)
+                        (System/exit 0))
                     (run rate timeout watch ignore targets)))))))
       (println banner))))
