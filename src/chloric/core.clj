@@ -112,11 +112,7 @@ and saves states to this var."}
            (on-add       (partial compile-cl2 timeout-ms targets))))
 
 (defn -main [& args]
-  (let [[{:keys [watch ignore rate timeout profile once
-                 color pretty-print timestamp
-                 verbose help
-                 import-boot include-core include-dev]}
-         targets banner]
+  (let [[options targets banner]
         (cli args
              ["-h" "--help" "Show help"]
              ["-u" "--profile"
@@ -145,7 +141,12 @@ and saves states to this var."}
               (str "Adds a javascript expression that logs "
                    "timestamps of compiling scripts")]
              ["-v" "--[no-]verbose" "Verbose mode"]
-             )]
+             )
+        {:keys [watch ignore rate timeout profile once
+                color pretty-print timestamp
+                verbose help
+                import-boot include-core include-dev]}
+        options]
     (when help
       (println banner)
       (System/exit 0))
