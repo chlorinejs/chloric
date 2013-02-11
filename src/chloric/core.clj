@@ -1,12 +1,10 @@
 (ns chloric.core
   (:use [chlorine.js]
-        [chlorine.util :only [replace-map with-timeout]]
+        [chlorine.util :only [replace-map with-timeout timestamp]]
         [watchtower.core]
         [clojure.tools.cli :only [cli]]
         [clojure.stacktrace :only [print-cause-trace]]
         [clansi.core])
-  (:import [java.util Calendar]
-           [java.text SimpleDateFormat])
   (:gen-class :main true))
 
 (def ^:dynamic *verbose* false)
@@ -38,13 +36,6 @@ and saves states to this var."}
                   {:temp-sym-count @*temp-sym-count*
                    :macros @*macros*
                    })})
-
-(defn timestamp
-  "Generates timestamp string in HH:mm:ss format."
-  []
-  (let [c (Calendar/getInstance)
-        f (SimpleDateFormat. "HH:mm:ss")]
-    (.format f (.getTime c))))
 
 (defn compile-with-preloaded
   "Compiles a file using preloaded states."
