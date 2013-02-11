@@ -55,8 +55,6 @@ and saves states to this var."}
               *macros*          (ref (:macros session))]
       (str
        (:including session)
-       (when *timestamp*
-         (eval `(js (console.log ~(timestamp)))))
        (tojs' f)))))
 
 (defn js-file-for
@@ -79,13 +77,17 @@ and saves states to this var."}
           (.mkdirs (.getParentFile js-f)))
         (spit js-f
               (with-timeout timeout
-                (if *including*
-                  (compile-with-preloaded f *including*)
-                  (binding [*temp-sym-count* (ref 999)
-                            *last-sexpr*     (ref nil)
-                            *macros*         (ref {})]
-                    (tojs' f))
-                  )))
+                (str
+                 (when *timestamp*
+                   (eval `(js (console.log "Script compiled at: "
+                                           ~(timestamp)))))
+                 (if *including*
+                   (compile-with-preloaded f *including*)
+                   (binding [*temp-sym-count* (ref 999)
+                             *last-sexpr*     (ref nil)
+                             *macros*         (ref {})]
+                     (tojs' f))
+                   ))))
         (println (style "Done!" :green))
         (catch Throwable e
           (println (format (str (style "Error: " :red) " compiling %s") f))
@@ -120,7 +122,7 @@ and saves states to this var."}
 
 (defn -main [& args]
   (let [[{:keys [watch ignore rate timeout profile once
-                 color pretty-print
+                 color pretty-print timestamp
                  verbose help
                  import-boot include-core include-dev]}
          targets banner]
@@ -148,6 +150,9 @@ and saves states to this var."}
              ["-t" "--timeout" "Timeout (in millisecond)"
               :parse-fn #(Integer. %)
               :default 5000]
+             ["-s" "--[no-]timestamp"
+              (str "Adds a javascript expression that logs "
+                   "timestamps of compiling scripts")]
              ["-v" "--[no-]verbose" "Verbose mode"]
              )]
     (when help
@@ -169,7 +174,8 @@ and saves states to this var."}
                                :include-core
                                include-dev
                                :include-dev
-                               )]
+                               )
+                  *timestamp* timestamp]
           (let [profile (get-profile profile)]
             (with-profile (if pretty-print
                             (merge profile {:pretty-print true})
@@ -186,7 +192,6 @@ and saves states to this var."}
                       (println (str "Targets:  " (pr-str targets)))
                       (println (str "Once?:    " (pr-str once)))
                       (println (str "Path-map: " (pr-str *path-map*)))))
-
                   (if once
                     (do (compile-cl2 timeout targets)
                         (System/exit 0))
