@@ -9,6 +9,56 @@
            [java.text SimpleDateFormat])
   (:gen-class :main true))
 
+(def ^:dynamic *verbose* false)
+(def ^:dynamic *path-map* {#".cl2$" ".js"})
+(def ^:dynamic *including* nil)
+(def ^:dynamic *timestamp* false)
+
+(def ^{:doc "Pre-compiles Chlorine environments once
+and saves states to this var."}
+  preloaded
+  {:include-dev (binding [*temp-sym-count* (ref 999)
+                          *last-sexpr*     (ref nil)
+                          *macros*         (ref {})]
+                  (let [including (js (include! [:resource "dev.cl2"]))]
+                    {:temp-sym-count @*temp-sym-count*
+                     :macros @*macros*
+                     :including including}))
+   :include-core (binding [*temp-sym-count* (ref 999)
+                           *last-sexpr*     (ref nil)
+                           *macros*         (ref {})]
+                   (let [including (js (include! [:resource "prod.cl2"]))]
+                     {:temp-sym-count @*temp-sym-count*
+                      :macros @*macros*
+                      :including including}))
+   :import-boot (binding [*temp-sym-count* (ref 999)
+                          *last-sexpr*     (ref nil)
+                          *macros*         (ref {})]
+                  (js (include! [:resource "bare.cl2"]))
+                  {:temp-sym-count @*temp-sym-count*
+                   :macros @*macros*
+                   })})
+
+(defn timestamp
+  "Generates timestamp string in HH:mm:ss format."
+  []
+  (let [c (Calendar/getInstance)
+        f (SimpleDateFormat. "HH:mm:ss")]
+    (.format f (.getTime c))))
+
+(defn compile-with-preloaded
+  "Compiles a file using preloaded states."
+  [f including]
+  (let [session (get preloaded including)]
+    (binding [*temp-sym-count*  (ref (:temp-sym-count session))
+              *last-sexpr*      (ref nil)
+              *macros*          (ref (:macros session))]
+      (str
+       (:including session)
+       (when *timestamp*
+         (eval `(js (console.log ~(timestamp)))))
+       (tojs' f)))))
+
 (defn js-file-for
   "Generate js file name from cl2 file name."
   [cl2-file path-map]
@@ -21,7 +71,7 @@
     (let [f (.getAbsolutePath (clojure.java.io/file file))
           js-f (clojure.java.io/file (js-file-for f *path-map*))]
       (println "")
-      (print (gen-timestamp))
+      (print (style (timestamp) :magenta))
       (print " ")
       (println (format "Compiling %s..." (style f :underline)))
       (try
@@ -29,8 +79,13 @@
           (.mkdirs (.getParentFile js-f)))
         (spit js-f
               (with-timeout timeout
-                (dosync (ref-set *macros* {}))
-                (tojs f)))
+                (if *including*
+                  (compile-with-preloaded f *including*)
+                  (binding [*temp-sym-count* (ref 999)
+                            *last-sexpr*     (ref nil)
+                            *macros*         (ref {})]
+                    (tojs' f))
+                  )))
         (println (style "Done!" :green))
         (catch Throwable e
           (println (format (str (style "Error: " :red) " compiling %s") f))
@@ -66,13 +121,17 @@
 (defn -main [& args]
   (let [[{:keys [watch ignore rate timeout profile once
                  color pretty-print
-                 verbose help]}
+                 verbose help
+                 import-boot include-core include-dev]}
          targets banner]
         (cli args
              ["-h" "--help" "Show help"]
              ["-u" "--profile"
               "Compile with a specified profile. Can be a file or a pre-defined keyword"
               :default ""]
+             ["-b" "--[no-]import-boot" "Loads Chlorine's bootstrap"]
+             ["-B" "--[no-]include-core" "Includes core library"]
+             ["-d" "--[no-]include-dev" "Includes development environment"]
              ["-w" "--watch"
               "A comma-delimited list of dirs or cl2 files to watch for changes.
  When a change to a cl2 file occurs, re-compile target files"]
@@ -94,11 +153,23 @@
     (when help
       (println banner)
       (System/exit 0))
+    (when (< 1 (count (filter true? [import-boot include-core include-dev])))
+      (println "You can use only no more than one of three: "
+               "import-boot, include-core and include-dev")
+      (System/exit 0))
     (if (not= [] targets)
       (do
         (println "")
         (binding [*use-ansi* color
-                  *verbose*  verbose]
+                  *verbose*  verbose
+                  *including* (cond
+                               import-boot
+                               :import-boot
+                               include-core
+                               :include-core
+                               include-dev
+                               :include-dev
+                               )]
           (let [profile (get-profile profile)]
             (with-profile (if pretty-print
                             (merge profile {:pretty-print true})
