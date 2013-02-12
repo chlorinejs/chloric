@@ -1,51 +1,48 @@
 (ns chloric.core
   (:use [chlorine.js]
         [chlorine.util :only [replace-map with-timeout timestamp]]
-        [watchtower.core]
+        [watchtower.core :only [watcher on-modify on-delete on-add
+                                notify-on-start? file-filter rate
+                                ignore-dotfiles extensions]]
         [clojure.tools.cli :only [cli]]
         [clojure.stacktrace :only [print-cause-trace]]
-        [clansi.core])
+        [clansi.core :only [*use-ansi* style]])
   (:gen-class :main true))
 
 (def ^:dynamic *verbose* false)
 (def ^:dynamic *path-map* {#".cl2$" ".js"})
-(def ^:dynamic *including* nil)
+(def ^:dynamic *inclusion* nil)
 (def ^:dynamic *timestamp* false)
+(def profiles {})
+
+(defn gen-state
+  "Compiles a pre-defined Chlorine environment, returns that state"
+  [resource-name]
+  (binding [*temp-sym-count* (ref 999)
+            *last-sexpr*     (ref nil)
+            *macros*         (ref {})]
+    (let [inclusion (eval `(js (include! [:resource
+                                         ~(str resource-name ".cl2")])))]
+      {:temp-sym-count @*temp-sym-count*
+       :macros @*macros*
+       :inclusion inclusion})))
 
 (def ^{:doc "Pre-compiles Chlorine environments once
 and saves states to this var."}
-  preloaded
-  {:include-dev (binding [*temp-sym-count* (ref 999)
-                          *last-sexpr*     (ref nil)
-                          *macros*         (ref {})]
-                  (let [including (js (include! [:resource "dev.cl2"]))]
-                    {:temp-sym-count @*temp-sym-count*
-                     :macros @*macros*
-                     :including including}))
-   :include-core (binding [*temp-sym-count* (ref 999)
-                           *last-sexpr*     (ref nil)
-                           *macros*         (ref {})]
-                   (let [including (js (include! [:resource "prod.cl2"]))]
-                     {:temp-sym-count @*temp-sym-count*
-                      :macros @*macros*
-                      :including including}))
-   :import-boot (binding [*temp-sym-count* (ref 999)
-                          *last-sexpr*     (ref nil)
-                          *macros*         (ref {})]
-                  (js (include! [:resource "bare.cl2"]))
-                  {:temp-sym-count @*temp-sym-count*
-                   :macros @*macros*
-                   })})
+  precomplied-states
+  {"dev"  (gen-state "dev")
+   "prod" (gen-state "prod")
+   "bare" (gen-state "bare")})
 
-(defn compile-with-preloaded
-  "Compiles a file using preloaded states."
-  [f including]
-  (let [session (get preloaded including)]
-    (binding [*temp-sym-count*  (ref (:temp-sym-count session))
+(defn compile-with-states
+  "Compiles a file using pre-compiled states."
+  [f state-name]
+  (let [state (get precomplied-states state-name)]
+    (binding [*temp-sym-count*  (ref (:temp-sym-count state))
               *last-sexpr*      (ref nil)
-              *macros*          (ref (:macros session))]
+              *macros*          (ref (:macros state))]
       (str
-       (:including session)
+       (:inclusion state)
        (tojs' f)))))
 
 (defn js-file-for
@@ -72,8 +69,8 @@ and saves states to this var."}
                  (when *timestamp*
                    (eval `(js (console.log "Script compiled at: "
                                            ~(timestamp)))))
-                 (if *including*
-                   (compile-with-preloaded f *including*)
+                 (if *inclusion*
+                   (compile-with-states f *inclusion*)
                    (binding [*temp-sym-count* (ref 999)
                              *last-sexpr*     (ref nil)
                              *macros*         (ref {})]
@@ -159,13 +156,13 @@ and saves states to this var."}
         (println "")
         (binding [*use-ansi* color
                   *verbose*  verbose
-                  *including* (cond
+                  *inclusion* (cond
                                import-boot
-                               :import-boot
+                               "bare"
                                include-core
-                               :include-core
+                               "prod"
                                include-dev
-                               :include-dev
+                               "dev"
                                )
                   *timestamp* timestamp]
           (let [profile (get-profile profile)]
