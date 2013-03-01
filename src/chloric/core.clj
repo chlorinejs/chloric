@@ -108,6 +108,13 @@ and saves states to this var."}
            (on-delete    delete-js)
            (on-add       (partial compile-cl2 timeout-ms targets))))
 
+(defmacro with-profile
+  [m & body]
+  `(binding [*print-pretty*     (or (:pretty-print ~m) *print-pretty*)
+             *symbol-map*       (or (:symbol-map   ~m) *symbol-map*)
+             *reserved-symbols* (or (:reserved-symbols ~m) *reserved-symbols*)]
+     ~@body))
+
 (defn -main [& args]
   (let [[options targets banner]
         (cli args
