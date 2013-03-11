@@ -108,6 +108,25 @@ and saves states to this var."}
            (on-delete    delete-js)
            (on-add       (partial compile-cl2 timeout-ms targets))))
 
+(defn get-profile [x]
+  (if (contains? profiles x)
+    (get profiles x)
+
+    (let [f (clojure.java.io/file x)
+          m (and (.isFile f)
+                 (try (read-string (slurp f))
+                      (catch Exception e "invalid file!")))
+          m? (map? m)]
+      (if m?
+        m
+        (if (not (nil? x))
+          (if *verbose*
+            (do
+              (println "")
+              (println "Profile not found. Using ")
+              (println (style "default" :yellow))
+              )))))))
+
 (defmacro with-profile
   [m & body]
   `(binding [*print-pretty*     (or (:pretty-print ~m) *print-pretty*)
