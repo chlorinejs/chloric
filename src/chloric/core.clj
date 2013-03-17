@@ -21,8 +21,8 @@
   (binding [*temp-sym-count* (ref 999)
             *last-sexpr*     (ref nil)
             *macros*         (ref {})]
-    (let [inclusion (eval `(js (include! [:resource
-                                         ~(str resource-name ".cl2")])))]
+    (let [inclusion (eval `(js (include!
+                                ~(str "r:/" resource-name ".cl2"))))]
       {:temp-sym-count @*temp-sym-count*
        :macros @*macros*
        :inclusion inclusion})))
