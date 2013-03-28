@@ -7,6 +7,6 @@
                  [org.clojars.zcaudate/watchtower "0.1.2"]
                  [org.clojure/tools.cli "0.2.2"]
                  [myguidingstar/clansi "1.3.0"]
-                 [chlorine "1.5.2"]
+                 [chlorine "1.5.2.1"]
                  [core-cl2 "0.6.0"]]
   :main chloric.core)
