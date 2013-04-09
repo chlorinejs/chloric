@@ -8,7 +8,7 @@ You can build chloric with:
 ```
 lein uberjar
 ```
-or [download](https://github.com/chlorinejs/chloric/downloads) the jar file.
+or [download](http://chlorinejs.github.com/chloric/chloric-0.1.8-standalone.jar) the latest standalone jar file.
 
 ## Usage
 
