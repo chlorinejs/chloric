@@ -116,17 +116,18 @@
              [(.getAbsolutePath (clojure.java.io/file ""))])
            (rate rate-ms)
            (file-filter ignore-dotfiles)
-           (file-filter (fn [f] (not
-                                 (contains?
-                                  (apply set
-                                         (clojure.string/split
-                                          (or ignore "") #","))
-                                  f))))
-           (file-filter (extensions :cl2))
+           (file-filter
+            (fn [f] (not
+                     (contains?
+                      (apply set
+                             (clojure.string/split
+                              (or ignore "") #","))
+                      f))))
+           (file-filter  (extensions :cl2))
            (notify-on-start? true)
-           (on-modify    (partial compile-cl2 timeout-ms targets))
+           (on-modify    (partial compile-cl2-files timeout-ms targets))
            (on-delete    delete-js)
-           (on-add       (partial compile-cl2 timeout-ms targets))))
+           (on-add       (partial compile-cl2-files timeout-ms targets))))
 
 (defn get-profile [x]
   (if (contains? profiles x)
@@ -144,8 +145,7 @@
             (do
               (println "")
               (println "Profile not found. Using ")
-              (println (style "default" :yellow))
-              )))))))
+              (println (style "default" :yellow)))))))))
 
 (defmacro with-profile
   [m & body]
@@ -159,14 +159,15 @@
         (cli args
              ["-h" "--help" "Show help"]
              ["-u" "--profile"
-              "Compile with a specified profile. Can be a file or a pre-defined keyword"
+              "Compile with a specified profile.
+ Can be a file or a pre-defined keyword."
               :default ""]
              ["-b" "--[no-]import-boot" "Loads Chlorine's bootstrap"]
              ["-B" "--[no-]include-core" "Includes core library"]
              ["-d" "--[no-]include-dev" "Includes development environment"]
              ["-w" "--watch"
               "A comma-delimited list of dirs or cl2 files to watch for changes.
- When a change to a cl2 file occurs, re-compile target files"]
+ When a change to a cl2 file occurs, re-compile target files."]
              ["-1" "--[no-]once"
               "Don't watch, just compile once" :default nil]
              ["-i" "--ignore"
@@ -183,8 +184,7 @@
              ["-s" "--[no-]timestamp"
               (str "Adds a javascript expression that logs "
                    "timestamps of compiling scripts")]
-             ["-v" "--[no-]verbose" "Verbose mode"]
-             )
+             ["-v" "--[no-]verbose" "Verbose mode"])
         {:keys [watch ignore rate timeout profile once
                 color pretty-print timestamp
                 verbose help
