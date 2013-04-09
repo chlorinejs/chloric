@@ -50,7 +50,20 @@
   [cl2-file path-map]
   (replace-map cl2-file path-map))
 
-(defn compile-cl2
+(defn bare-compile
+  "Compiles a file without using pre-compiled states."
+  [file]
+  (binding [*temp-sym-count* (ref 999)
+            *last-sexpr*     (ref nil)
+            *macros*         (ref {})]
+    (tojs' file)))
+
+(defn set-terminal-title
+  "Sets title of current terminal window."
+  [new-title]
+  (printf "%s]2;%s%s" (char 27) new-title (char 7)))
+
+(defn compile-cl2-files
   "Compiles a list of .cl2 files"
   [timeout targets & _]
   (doseq [file targets]
