@@ -99,7 +99,7 @@
         total (count status)
         failures (count (filter #(= :FAILED %) status))]
     (if (= 0 failures)
-      (set-terminal-title (format "✔ %d tests complete" total))
+      (set-terminal-title (format "✔ %d files compiled" total))
       (set-terminal-title (format "%d/%d ✘" failures total)))))
 
 (defn delete-js
