@@ -198,37 +198,32 @@
                "import-boot, include-core and include-dev")
       (System/exit 0))
     (if (not= [] targets)
-      (do
-        (println "")
-        (binding [*use-ansi* color
-                  *verbose*  verbose
-                  *inclusion* (cond
-                               import-boot
-                               "bare"
-                               include-core
-                               "prod"
-                               include-dev
-                               "dev"
-                               )
-                  *timestamp* timestamp]
-          (let [profile (get-profile profile)]
-            (with-profile (if pretty-print
-                            (merge profile {:pretty-print true})
-                            profile)
-              (binding [*path-map* (or (:path-map profile) *path-map*)]
-                  (if *verbose*
-                    (do
-                      (println (str (style "*symbol-map*:   " :magenta)
-                                    (style *symbol-map* :blue)))
-                      (println (str (style "*pretty-print*: " :magenta)
-                                    (style  *print-pretty* :blue)))
-                      (println (str "Watching: " (pr-str watch)))
-                      (println (str "Ignoring: " (pr-str ignore)))
-                      (println (str "Targets:  " (pr-str targets)))
-                      (println (str "Once?:    " (pr-str once)))
-                      (println (str "Path-map: " (pr-str *path-map*)))))
-                  (if once
-                    (do (compile-cl2 timeout targets)
-                        (System/exit 0))
-                    (run rate timeout watch ignore targets)))))))
+      (binding [*use-ansi* color
+                *verbose*  verbose
+                *inclusion* (cond
+                             import-boot  "bare"
+                             include-core "prod"
+                             include-dev  "dev")
+                *timestamp* timestamp]
+        (let [profile (get-profile profile)]
+          (with-profile (if pretty-print
+                          (merge profile {:pretty-print true})
+                          profile)
+            (binding [*path-map* (or (:path-map profile) *path-map*)]
+              (if *verbose*
+                (do
+                  (println)
+                  (println (str (style "*symbol-map*:   " :magenta)
+                                (style *symbol-map* :blue)))
+                  (println (str (style "*pretty-print*: " :magenta)
+                                (style  *print-pretty* :blue)))
+                  (println (str "Watching: " (pr-str watch)))
+                  (println (str "Ignoring: " (pr-str ignore)))
+                  (println (str "Targets:  " (pr-str targets)))
+                  (println (str "Once?:    " (pr-str once)))
+                  (println (str "Path-map: " (pr-str *path-map*)))))
+              (if once
+                (do (compile-cl2-files timeout targets)
+                    (System/exit 0))
+                (run rate timeout watch ignore targets))))))
       (println banner))))
