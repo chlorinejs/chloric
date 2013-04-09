@@ -66,34 +66,41 @@
 (defn compile-cl2-files
   "Compiles a list of .cl2 files"
   [timeout targets & _]
-  (doseq [file targets]
-    (let [f (.getAbsolutePath (clojure.java.io/file file))
-          js-f (clojure.java.io/file (js-file-for f *path-map*))]
-      (println "")
-      (print (style (timestamp) :magenta))
-      (print " ")
-      (println (format "Compiling %s..." (style f :underline)))
-      (try
-        (when-not (.isDirectory (.getParentFile js-f))
-          (.mkdirs (.getParentFile js-f)))
-        (spit js-f
-              (with-timeout timeout
-                (str
-                 (when *timestamp*
-                   (eval `(js (console.log "Script compiled at: "
-                                           ~(timestamp)))))
-                 (if *inclusion*
-                   (compile-with-states f *inclusion*)
-                   (binding [*temp-sym-count* (ref 999)
-                             *last-sexpr*     (ref nil)
-                             *macros*         (ref {})]
-                     (tojs' f))
-                   ))))
-        (println (style "Done!" :green))
-        (catch Throwable e
-          (println (format (str (style "Error: " :red) " compiling %s") f))
-          (print-cause-trace e
-                             (if *verbose* 10 3)))))))
+  (let [status
+        (->
+         (fn [file]
+           (let [cl2-input (.getAbsolutePath (clojure.java.io/file file))
+                 js-output (clojure.java.io/file
+                            (js-file-for cl2-input *path-map*))]
+             (print "\n" (style (timestamp) :magenta) " ")
+             (println (format "Compiling %s..." (style cl2-input :underline)))
+             (try
+               (when-not (.isDirectory (.getParentFile js-output))
+                 (.mkdirs (.getParentFile js-output)))
+               (spit js-output
+                     (with-timeout timeout
+                       (str
+                        (when *timestamp*
+                          (eval `(js (console.log "Script compiled at: "
+                                                  ~(timestamp)))))
+                        (if *inclusion*
+                          (compile-with-states cl2-input *inclusion*)
+                          (bare-compile cl2-input)))))
+               (println (style "Done!" :green))
+               :PASSED
+               (catch Throwable e
+                 (println
+                  (format (str (style "Error: " :red) " compiling %s")
+                          cl2-input))
+                 (print-cause-trace
+                  e (if *verbose* 10 3))
+                 :FAILED))))
+         (map targets))
+        total (count status)
+        failures (count (filter #(= :FAILED %) status))]
+    (if (= 0 failures)
+      (set-terminal-title (format "✔ %d tests complete" total))
+      (set-terminal-title (format "%d/%d ✘" failures total)))))
 
 (defn delete-js
   "Delete .js files when their .cl2 source files are deleted."
