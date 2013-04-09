@@ -28,7 +28,7 @@
        :inclusion inclusion})))
 
 (def ^{:doc "Pre-compiles Chlorine environments once
-and saves states to this var."}
+  and saves states to this var."}
   precomplied-states
   {"dev"  (gen-state "dev")
    "prod" (gen-state "prod")
