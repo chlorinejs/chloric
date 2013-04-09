@@ -61,11 +61,13 @@
 (defn set-terminal-title
   "Sets title of current terminal window."
   [new-title]
-  (printf "%s]2;%s%s" (char 27) new-title (char 7)))
+  (printf "%s]2;%s%s" (char 27) new-title (char 7))
+  (println))
 
 (defn compile-cl2-files
   "Compiles a list of .cl2 files"
   [timeout targets & _]
+  (set-terminal-title (format "Compiling files..."))
   (let [status
         (->
          (fn [file]
