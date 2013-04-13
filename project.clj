@@ -1,4 +1,4 @@
-(defproject chloric "0.1.8"
+(defproject chloric "0.1.9"
   :description "Clojure/Chlorine command-line watcher/compiler"
   :url "http://github.com/myguidingstar/chloric"
   :license {:name "Eclipse Public License"
@@ -8,5 +8,5 @@
                  [org.clojure/tools.cli "0.2.2"]
                  [myguidingstar/clansi "1.3.0"]
                  [chlorine "1.5.2.2"]
-                 [core-cl2 "0.7.0"]]
+                 [core-cl2 "0.7.1"]]
   :main chloric.core)
