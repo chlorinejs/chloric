@@ -4,6 +4,7 @@
         [watchtower.core :only [watcher on-modify on-delete on-add
                                 notify-on-start? file-filter rate
                                 ignore-dotfiles extensions]]
+        [slingshot.slingshot]
         [clojure.tools.cli :only [cli]]
         [clojure.stacktrace :only [print-cause-trace]]
         [clansi.core :only [*use-ansi* style]])
@@ -19,7 +20,6 @@
   "Compiles a pre-defined Chlorine environment, returns that state"
   [resource-name]
   (binding [*temp-sym-count* (ref 999)
-            *last-sexpr*     (ref nil)
             *macros*         (ref {})]
     (let [inclusion (eval `(js (include!
                                 ~(str "r:/" resource-name ".cl2"))))]
@@ -39,7 +39,6 @@
   [f state-name]
   (let [state (get precomplied-states state-name)]
     (binding [*temp-sym-count*  (ref (:temp-sym-count state))
-              *last-sexpr*      (ref nil)
               *macros*          (ref (:macros state))]
       (str
        (:inclusion state)
@@ -54,7 +53,6 @@
   "Compiles a file without using pre-compiled states."
   [file]
   (binding [*temp-sym-count* (ref 999)
-            *last-sexpr*     (ref nil)
             *macros*         (ref {})]
     (tojs' file)))
 
@@ -76,27 +74,46 @@
                             (js-file-for cl2-input *path-map*))]
              (print "\n" (style (timestamp) :magenta) " ")
              (println (format "Compiling %s..." (style cl2-input :underline)))
-             (try
-               (when-not (.isDirectory (.getParentFile js-output))
-                 (.mkdirs (.getParentFile js-output)))
-               (spit js-output
-                     (with-timeout timeout
-                       (str
-                        (when *timestamp*
-                          (eval `(js (console.log "Script compiled at: "
-                                                  ~(timestamp)))))
-                        (if *inclusion*
-                          (compile-with-states cl2-input *inclusion*)
-                          (bare-compile cl2-input)))))
-               (println (style "Done!" :green))
-               :PASSED
-               (catch Throwable e
-                 (println
-                  (format (str (style "Error: " :red) " compiling %s")
-                          cl2-input))
-                 (print-cause-trace
-                  e (if *verbose* 10 3))
-                 :FAILED))))
+             (try+
+              (when-not (.isDirectory (.getParentFile js-output))
+                (.mkdirs (.getParentFile js-output)))
+              (spit js-output
+                    (with-timeout timeout
+                      (str
+                       (when *timestamp*
+                         (eval `(js (console.log "Script compiled at: "
+                                                 ~(timestamp)))))
+                       (if *inclusion*
+                         (compile-with-states cl2-input *inclusion*)
+                         (bare-compile cl2-input)))))
+              (println (style "Done!" :green))
+              :PASSED
+              (catch map? e
+                (println
+                 (format (str (style "Error: " :red) " compiling %s")
+                         cl2-input))
+                (println (style (:msg e) :blue))
+                (doseq [i (range (count (:causes e)))
+                        :let [cause (nth (:causes e) i)]]
+                  (print (apply str (repeat (inc i) "  ")))
+                  (println "caused by " (style cause :yellow)))
+                (when-let [trace (:trace e)]
+                  (print-cause-trace
+                   trace
+                   (if *verbose* 10 3)))
+                :FAILED)
+              (catch java.util.concurrent.TimeoutException e
+                (println
+                 (format (str (style "Error: " :red) " Timeout compiling %s")
+                         cl2-input))
+                :FAILED)
+              (catch Throwable e
+                (println
+                 (format (str (style "Unknown error: " :red) " compiling %s")
+                         cl2-input))
+                (print-cause-trace
+                 e (if *verbose* 10 3))
+                :FAILED))))
          (map targets))
         total (count status)
         failures (count (filter #(= :FAILED %) status))]
