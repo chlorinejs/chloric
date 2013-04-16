@@ -8,12 +8,12 @@ You can build chloric with:
 ```
 lein uberjar
 ```
-or [download](http://chlorinejs.github.com/chloric/chloric-0.1.8-standalone.jar) the latest standalone jar file.
+or [download](https://github.com/chlorinejs/chlorine/wiki/Downloads) the latest standalone jar file.
 
 ## Usage
 
 ```
-java -jar chloric-0.1.5-SNAPSHOT-standalone.jar -r 2000 some-dirs-or-files
+java -jar chloric-{VERSION}-standalone.jar -r 2000 some-dirs-or-files
 ```
 ...or you may prefer [`drip`](https://github.com/flatland/drip/) to `java` command.
 A watcher will start and check for changes every 2 seconds.
