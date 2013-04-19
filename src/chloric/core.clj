@@ -45,8 +45,8 @@
        (:inclusion state)
        (tojs' f)))))
 
-(defn js-file-for
-  "Generate js file name from cl2 file name."
+(defn output-file-for
+  "Generate .html and .js file names from .hic and .cl2 ones."
   [cl2-file path-map]
   (replace-map cl2-file path-map))
 
