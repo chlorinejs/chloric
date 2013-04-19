@@ -5,13 +5,14 @@
                                 notify-on-start? file-filter rate
                                 ignore-dotfiles extensions]]
         [slingshot.slingshot]
+        [hiccup.core :only [html]]
         [clojure.tools.cli :only [cli]]
         [clojure.stacktrace :only [print-cause-trace]]
         [clansi.core :only [*use-ansi* style]])
   (:gen-class :main true))
 
 (def ^:dynamic *verbose* false)
-(def ^:dynamic *path-map* {#".cl2$" ".js"})
+(def ^:dynamic *path-map* {#".cl2$" ".js" #".hic$" ".html"})
 (def ^:dynamic *inclusion* nil)
 (def ^:dynamic *timestamp* false)
 (def profiles {})
