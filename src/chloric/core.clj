@@ -88,10 +88,16 @@
                          (if *inclusion*
                            (compile-with-states input *inclusion*)
                            (bare-compile input)))
-                        (-> input
-                            slurp
-                            read-string
-                            html))))
+                        (let [content (-> input
+                                          slurp
+                                          read-string)]
+                          (str (when (or (and (list? content)
+                                              (vector? (first content))
+                                              (= :html (ffirst content)))
+                                         (and (vector?  content)
+                                              (= :html (first content))))
+                                 "<!DOCTYPE html>")
+                               (html content))))))
               (println (style "Done!" :green))
               :PASSED
               (catch map? e
