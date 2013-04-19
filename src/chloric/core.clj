@@ -191,8 +191,8 @@
              ["-B" "--[no-]include-core" "Includes core library"]
              ["-d" "--[no-]include-dev" "Includes development environment"]
              ["-w" "--watch"
-              "A comma-delimited list of dirs or cl2 files to watch for changes.
- When a change to a cl2 file occurs, re-compile target files."]
+              "A comma-delimited list of dirs or .hic/.cl2 files to watch for changes.
+ When a change to a source file occurs, re-compile target files."]
              ["-1" "--[no-]once"
               "Don't watch, just compile once" :default nil]
              ["-i" "--ignore"
