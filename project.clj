@@ -1,4 +1,4 @@
-(defproject chloric "0.1.10"
+(defproject chloric "0.1.11"
   :description "Clojure/Chlorine command-line watcher/compiler"
   :url "http://github.com/myguidingstar/chloric"
   :license {:name "Eclipse Public License"
@@ -9,4 +9,7 @@
                  [myguidingstar/clansi "1.3.0"]
                  [chlorine "1.5.3"]
                  [core-cl2 "0.7.1"]]
+  :bin {:name "chloric"
+        :bin-path "~/bin"
+        :bootclasspath true}
   :main chloric.core)

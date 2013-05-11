@@ -5,13 +5,14 @@
                                 notify-on-start? file-filter rate
                                 ignore-dotfiles extensions]]
         [slingshot.slingshot]
+        [hiccup.core :only [html]]
         [clojure.tools.cli :only [cli]]
         [clojure.stacktrace :only [print-cause-trace]]
         [clansi.core :only [*use-ansi* style]])
   (:gen-class :main true))
 
 (def ^:dynamic *verbose* false)
-(def ^:dynamic *path-map* {#".cl2$" ".js"})
+(def ^:dynamic *path-map* {#".cl2$" ".js" #".hic$" ".html"})
 (def ^:dynamic *inclusion* nil)
 (def ^:dynamic *timestamp* false)
 (def profiles {})
@@ -44,10 +45,10 @@
        (:inclusion state)
        (tojs' f)))))
 
-(defn js-file-for
-  "Generate js file name from cl2 file name."
-  [cl2-file path-map]
-  (replace-map cl2-file path-map))
+(defn output-file-for
+  "Generate .html and .js file names from .hic and .cl2 ones."
+  [input-file path-map]
+  (replace-map input-file path-map))
 
 (defn bare-compile
   "Compiles a file without using pre-compiled states."
@@ -62,36 +63,47 @@
   (printf "%s]2;%s%s" (char 27) new-title (char 7))
   (println))
 
-(defn compile-cl2-files
-  "Compiles a list of .cl2 files"
+(defn compile-files
+  "Compiles a list of .cl2 and .hic files"
   [timeout targets & _]
   (set-terminal-title (format "Compiling files..."))
   (let [status
         (->
          (fn [file]
-           (let [cl2-input (.getAbsolutePath (clojure.java.io/file file))
-                 js-output (clojure.java.io/file
-                            (js-file-for cl2-input *path-map*))]
+           (let [input (.getAbsolutePath (clojure.java.io/file file))
+                 output (clojure.java.io/file
+                         (output-file-for input *path-map*))]
              (print "\n" (style (timestamp) :magenta) " ")
-             (println (format "Compiling %s..." (style cl2-input :underline)))
+             (println (format "Compiling %s..." (style input :underline)))
              (try+
-              (when-not (.isDirectory (.getParentFile js-output))
-                (.mkdirs (.getParentFile js-output)))
-              (spit js-output
+              (when-not (.isDirectory (.getParentFile output))
+                (.mkdirs (.getParentFile output)))
+              (spit output
                     (with-timeout timeout
-                      (str
-                       (when *timestamp*
-                         (eval `(js (console.log "Script compiled at: "
-                                                 ~(timestamp)))))
-                       (if *inclusion*
-                         (compile-with-states cl2-input *inclusion*)
-                         (bare-compile cl2-input)))))
+                      (if (.endsWith input ".cl2")
+                        (str
+                         (when *timestamp*
+                           (eval `(js (console.log "Script compiled at: "
+                                                   ~(timestamp)))))
+                         (if *inclusion*
+                           (compile-with-states input *inclusion*)
+                           (bare-compile input)))
+                        (let [content (-> input
+                                          slurp
+                                          read-string)]
+                          (str (when (or (and (list? content)
+                                              (vector? (first content))
+                                              (= :html (ffirst content)))
+                                         (and (vector?  content)
+                                              (= :html (first content))))
+                                 "<!DOCTYPE html>")
+                               (html content))))))
               (println (style "Done!" :green))
               :PASSED
               (catch map? e
                 (println
                  (format (str (style "Error: " :red) " compiling %s")
-                         cl2-input))
+                         input))
                 (println (style (:msg e) :blue))
                 (doseq [i (range (count (:causes e)))
                         :let [cause (nth (:causes e) i)]]
@@ -105,12 +117,12 @@
               (catch java.util.concurrent.TimeoutException e
                 (println
                  (format (str (style "Error: " :red) " Timeout compiling %s")
-                         cl2-input))
+                         input))
                 :FAILED)
               (catch Throwable e
                 (println
                  (format (str (style "Unknown error: " :red) " compiling %s")
-                         cl2-input))
+                         input))
                 (print-cause-trace
                  e (if *verbose* 10 3))
                 :FAILED))))
@@ -122,10 +134,10 @@
       (set-terminal-title (format "%d/%d ✘" failures total)))))
 
 (defn delete-js
-  "Delete .js files when their .cl2 source files are deleted."
+  "Delete output files when their source files are deleted."
   [cl2-files]
   (doseq [f cl2-files]
-    (.delete (clojure.java.io/file (js-file-for f)))))
+    (.delete (clojure.java.io/file (output-file-for f)))))
 
 (defn run
   "Start the main watcher."
@@ -142,11 +154,11 @@
                              (clojure.string/split
                               (or ignore "") #","))
                       f))))
-           (file-filter  (extensions :cl2))
+           (file-filter  (extensions :cl2 :hic))
            (notify-on-start? true)
-           (on-modify    (partial compile-cl2-files timeout-ms targets))
+           (on-modify    (partial compile-files timeout-ms targets))
            (on-delete    delete-js)
-           (on-add       (partial compile-cl2-files timeout-ms targets))))
+           (on-add       (partial compile-files timeout-ms targets))))
 
 (defn get-profile [x]
   (if (contains? profiles x)
@@ -185,8 +197,8 @@
              ["-B" "--[no-]include-core" "Includes core library"]
              ["-d" "--[no-]include-dev" "Includes development environment"]
              ["-w" "--watch"
-              "A comma-delimited list of dirs or cl2 files to watch for changes.
- When a change to a cl2 file occurs, re-compile target files."]
+              "A comma-delimited list of dirs or .hic/.cl2 files to watch for changes.
+ When a change to a source file occurs, re-compile target files."]
              ["-1" "--[no-]once"
               "Don't watch, just compile once" :default nil]
              ["-i" "--ignore"
@@ -242,7 +254,7 @@
                   (println (str "Once?:    " (pr-str once)))
                   (println (str "Path-map: " (pr-str *path-map*)))))
               (if once
-                (do (compile-cl2-files timeout targets)
+                (do (compile-files timeout targets)
                     (System/exit 0))
                 (run rate timeout watch ignore targets))))))
       (println banner))))
