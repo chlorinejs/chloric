@@ -18,17 +18,17 @@
 (def profiles {})
 
 (defn gen-state
-  "Compiles a pre-defined Chlorine environment, returns that state"
-  [resource-name]
+  "Compiles a pre-defined Chlorine strategy, returns that state"
+  [strategy]
   (binding [*temp-sym-count* (ref 999)
             *macros*         (ref {})]
-    (let [inclusion (eval `(js (include!
-                                ~(str "r:/" resource-name ".cl2"))))]
+    (let [inclusion (eval `(js (load-file
+                                ~(str "r:/strategies/" strategy ".cl2"))))]
       {:temp-sym-count @*temp-sym-count*
        :macros @*macros*
        :inclusion inclusion})))
 
-(def ^{:doc "Pre-compiles Chlorine environments once
+(def ^{:doc "Pre-compiles Chlorine strategies once
   and saves states to this var."}
   precomplied-states
   {"dev"  (gen-state "dev")
@@ -135,8 +135,8 @@
 
 (defn delete-js
   "Delete output files when their source files are deleted."
-  [cl2-files]
-  (doseq [f cl2-files]
+  [source-files]
+  (doseq [f source-files]
     (.delete (clojure.java.io/file (output-file-for f)))))
 
 (defn run
@@ -193,7 +193,7 @@
               "Compile with a specified profile.
  Can be a file or a pre-defined keyword."
               :default ""]
-             ["-b" "--[no-]import-boot" "Loads Chlorine's bootstrap"]
+             ["-b" "--[no-]load-boot" "Loads Chlorine's bootstrap"]
              ["-B" "--[no-]include-core" "Includes core library"]
              ["-d" "--[no-]include-dev" "Includes development environment"]
              ["-w" "--watch"
@@ -219,20 +219,20 @@
         {:keys [watch ignore rate timeout profile once
                 color pretty-print timestamp
                 verbose help
-                import-boot include-core include-dev]}
+                load-boot include-core include-dev]}
         options]
     (when help
       (println banner)
       (System/exit 0))
-    (when (< 1 (count (filter true? [import-boot include-core include-dev])))
+    (when (< 1 (count (filter true? [load-boot include-core include-dev])))
       (println "You can use only no more than one of three: "
-               "import-boot, include-core and include-dev")
+               "load-boot, include-core and include-dev")
       (System/exit 0))
     (if (not= [] targets)
       (binding [*use-ansi* color
                 *verbose*  verbose
                 *inclusion* (cond
-                             import-boot  "bare"
+                             load-boot  "bare"
                              include-core "prod"
                              include-dev  "dev")
                 *timestamp* timestamp]
