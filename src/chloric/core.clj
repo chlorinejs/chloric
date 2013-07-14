@@ -1,6 +1,7 @@
 (ns chloric.core
   (:use [chlorine.js]
-        [chlorine.util :only [replace-map with-timeout timestamp]]
+        [chlorine.util :only [replace-map with-timeout timestamp
+                              *paths*]]
         [watchtower.core :only [watcher on-modify on-delete on-add
                                 notify-on-start? file-filter rate
                                 ignore-dotfiles extensions]]
@@ -201,6 +202,9 @@
  When a change to a source file occurs, re-compile target files."]
              ["-1" "--[no-]once"
               "Don't watch, just compile once" :default nil]
+             ["-I" "--include-paths"
+              "A comma-delimited list of paths to find files."
+              :default nil]
              ["-i" "--ignore"
               "A comma-delimited list of folders to ignore for changes."
               :default nil]
@@ -218,7 +222,7 @@
              ["-v" "--[no-]verbose" "Verbose mode"])
         {:keys [watch ignore rate timeout profile once
                 color pretty-print timestamp
-                verbose help
+                verbose help include-paths
                 load-boot include-core include-dev]}
         options]
     (when help
@@ -235,12 +239,16 @@
                              load-boot  "bare"
                              include-core "prod"
                              include-dev  "dev")
+                *paths* (or (when include-paths
+                              (clojure.string/split include-paths #","))
+                            [])
                 *timestamp* timestamp]
         (let [profile (get-profile profile)]
           (with-profile (if pretty-print
                           (merge profile {:pretty-print true})
                           profile)
-            (binding [*path-map* (or (:path-map profile) *path-map*)]
+            (binding [*path-map* (:path-map profile *path-map*)
+                      *paths* (:paths profile *paths*)]
               (if *verbose*
                 (do
                   (println)
@@ -250,6 +258,7 @@
                                 (style  *print-pretty* :blue)))
                   (println (str "Watching: " (pr-str watch)))
                   (println (str "Ignoring: " (pr-str ignore)))
+                  (println (str "Paths: " (pr-str *paths*)))
                   (println (str "Targets:  " (pr-str targets)))
                   (println (str "Once?:    " (pr-str once)))
                   (println (str "Path-map: " (pr-str *path-map*)))))
