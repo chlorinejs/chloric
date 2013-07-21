@@ -1,5 +1,6 @@
 (ns chloric.core
   (:use [chlorine.js]
+        [closure-clj.core :only [compress]]
         [chlorine.util :only [replace-map with-timeout timestamp
                               *paths*]]
         [watchtower.core :only [watcher on-modify on-delete on-add

@@ -8,6 +8,7 @@
                  [org.clojure/tools.cli "0.2.2"]
                  [myguidingstar/clansi "1.3.0"]
                  [chlorine "1.6.2"]
+                 [closure-clj "0.1.3"]
                  [core-cl2 "0.8.0"]]
   :bin {:name "chloric"
         :bin-path "~/bin"
