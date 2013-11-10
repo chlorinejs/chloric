@@ -35,7 +35,7 @@
   precomplied-states
   {"dev"  (gen-state "dev")
    "prod" (gen-state "prod")
-   "bare" (gen-state "bare")})
+   "prod-compat" (gen-state "prod-compat")})
 
 (defn compile-with-states
   "Compiles a file using pre-compiled states."
@@ -195,9 +195,8 @@
               "Compile with a specified profile.
  Can be a file or a pre-defined keyword."
               :default ""]
-             ["-b" "--[no-]load-boot" "Loads Chlorine's bootstrap"]
-             ["-B" "--[no-]include-core" "Includes core library"]
-             ["-d" "--[no-]include-dev" "Includes development environment"]
+             ["-C" "--[no-]compatible-mode" "Fall back to self implementations of map/reduce etc if not available."]
+             ["-D" "--[no-]dev-env" "Development environment (unit test and pr-str)"]
              ["-w" "--watch"
               "A comma-delimited list of dirs or .hic/.cl2 files to watch for changes.
  When a change to a source file occurs, re-compile target files."]
@@ -224,22 +223,18 @@
         {:keys [watch ignore rate timeout profile once
                 color pretty-print timestamp
                 verbose help include-paths
-                load-boot include-core include-dev]}
+                compatible-mode dev-env]}
         options]
     (when help
       (println banner)
-      (System/exit 0))
-    (when (< 1 (count (filter true? [load-boot include-core include-dev])))
-      (println "You can use only no more than one of three: "
-               "load-boot, include-core and include-dev")
       (System/exit 0))
     (if (not= [] targets)
       (binding [*use-ansi* color
                 *verbose*  verbose
                 *inclusion* (cond
-                             load-boot  "bare"
-                             include-core "prod"
-                             include-dev  "dev")
+                             dev-env  "dev"
+                             compatible-mode  "prod-compat"
+                             :default "prod")
                 *paths* (or (when include-paths
                               (clojure.string/split include-paths #","))
                             [])
