@@ -1,4 +1,4 @@
-(defproject chloric "0.1.15-SNAPSHOT"
+(defproject chloric "0.1.16-SNAPSHOT"
   :description "Clojure/Chlorine command-line watcher/compiler"
   :url "http://github.com/chlorinejs/chloric"
   :license {:name "Eclipse Public License"
