@@ -1,5 +1,7 @@
 # Chloric
 
+DEPRECATED in favour of [lein-cl2c](https://github.com/chlorinejs/lein-cl2c)
+
 A watcher/compiler for Clojure/[Chlorine](https://github.com/chlorinejs/chlorine)
 
 ## Get Chloric
